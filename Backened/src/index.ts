@@ -7,6 +7,8 @@ import connect from './db/ConnectDb';
 import dotenv from 'dotenv';
 import { CheckUserSignIn } from './Middleware/CheckUserSignIn';
 import jwt from 'jsonwebtoken';
+import { CheckToken } from './Middleware/CheckToken';
+import { ContentModel } from './db/ContentScheme';
 
 
 dotenv.config();
@@ -48,31 +50,54 @@ app.post('/api/v1/signup', async (req: Request, res: Response): Promise<any> => 
 })
 //Sign in EndPoint 
 app.post('/api/v1/signin', async (req: Request, res: Response): Promise<any> => {
-   try {
-    const recivedSignInData = userValidScheme.safeParse(req.body);
-    if (!recivedSignInData.success) {
-        console.log('Validation failed:', recivedSignInData.error);
-        return res.status(411).json({ msg: 'Error in inputs' })
+    try {
+        const recivedSignInData = userValidScheme.safeParse(req.body);
+        if (!recivedSignInData.success) {
+            console.log('Validation failed:', recivedSignInData.error);
+            return res.status(411).json({ msg: 'Error in inputs' })
+        }
+        if (!(await CheckUserSignIn(recivedSignInData.data.username, recivedSignInData.data.password))) {
+            return res.status(403).json({ msg: 'Invalid Creditenial ' });
+        }
+        //Generate Token 
+        if (Secret_key) {
+            const user = await UserModel.findOne({ username: recivedSignInData.data.username });
+            const token = jwt.sign(
+                { id: user?._id, username: recivedSignInData.data.username },
+                Secret_key,
+                { expiresIn: '1h' }
+            );
+
+            return res.status(200).json({ token })
+        }
+
+    } catch (error) {
+        res.status(500).json({ msg: 'Interval sever error' + error })
+
     }
-    if (!(await CheckUserSignIn(recivedSignInData.data.username, recivedSignInData.data.password))) {
-        return res.status(403).json({ msg: 'Invalid Creditenial ' });
-    }
-    //Generate Token 
-    if (Secret_key) {
-        const token = jwt.sign(recivedSignInData.data.username, Secret_key)
-        return res.status(200).json({ token })
-    }
-    
-   } catch (error) {
-    res.status(500).json({msg:'Interval sever erro'+error})
-    
-   }
 })
 
-
 //Add Content EndPoint 
-app.post('/api/v1/content', (req, res) => {
-
+//First create AuthMiddleware check the token users Send
+app.post('/api/v1/content', CheckToken, async (req, res) => {
+    const title = req.body.title;
+    const link = req.body.link;
+    const type=req.body.type;
+    try {
+        await ContentModel.create(
+            {
+                title: title,
+                link: link,
+                type:type,
+                //@ts-ignore
+                userId: req.userId,
+                tags: []
+            })
+            res.status(200).json({msg:'Content Added'})
+    } catch (error) {
+        res.json({msg:'Error '+error})
+        
+    }
 })
 
 //  Get Content EndPoint 

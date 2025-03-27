@@ -1,1 +1,1 @@
-{"root":["./src/index.ts","./src/middleware/checkuserexit.ts","./src/middleware/checkusersignin.ts","./src/validations/signin.ts","./src/db/connectdb.ts","./src/db/contentscheme.ts","./src/db/tagscheme.ts","./src/db/userscheme.ts"],"version":"5.8.2"}
+{"root":["./src/index.ts","./src/middleware/checktoken.ts","./src/middleware/checkuserexit.ts","./src/middleware/checkusersignin.ts","./src/validations/signin.ts","./src/db/connectdb.ts","./src/db/contentscheme.ts","./src/db/linkscheme.ts","./src/db/tagscheme.ts","./src/db/userscheme.ts"],"version":"5.8.2"}
