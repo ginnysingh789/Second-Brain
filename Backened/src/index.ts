@@ -73,41 +73,58 @@ app.post('/api/v1/signin', async (req: Request, res: Response): Promise<any> => 
 
     } catch (error) {
         res.status(500).json({ msg: 'Interval sever error' + error })
-
     }
 })
-
 //Add Content EndPoint 
 //First create AuthMiddleware check the token users Send
-app.post('/api/v1/content', CheckToken, async (req, res) => {
+app.post('/api/v1/content', CheckToken, async (req:Request, res:Response) => {
     const title = req.body.title;
     const link = req.body.link;
-    const type=req.body.type;
+    const type = req.body.type;
     try {
         await ContentModel.create(
             {
                 title: title,
                 link: link,
-                type:type,
+                type: type,
                 //@ts-ignore
                 userId: req.userId,
                 tags: []
             })
-            res.status(200).json({msg:'Content Added'})
+        res.status(200).json({ msg: 'Content Added' })
     } catch (error) {
-        res.json({msg:'Error '+error})
-        
+        res.json({ msg: 'Error ' + error })
+
     }
 })
-
 //  Get Content EndPoint 
-app.get('/api/v1/content', (req, res) => {
-
+app.get('/api/v1/content', CheckToken, async (req:Request, res:Response) => {
+    //@ts-ignore
+    const userId = req.userId;
+    try {
+        const content = await ContentModel.find({ userId }).populate("userId","username");//populate used it show the username of the user
+        res.json({ content });
+    } catch (error) {
+        res.json({ error })
+    }
 })
-
 //Delete Content EndPoint 
-app.delete('/api/v1/content', (req, res) => {
-
+app.delete('/api/v1/content',CheckToken, async(req:Request, res:Response):Promise<any> => {
+    const deleteContent=req.body.id;;
+    //@ts-ignore
+    const userId = req.userId;
+    //Done at later 
+    if(! await(ContentModel.findOne({userId:userId})))
+    {
+       return  res.status(403).json({msg:'You dont own this doc'})
+    }
+    try {
+        await ContentModel.deleteMany({_id:deleteContent,userId:userId});
+        res.json({msg:'Deleted succeeded'})
+        
+    } catch (error) {
+        res.status(411).json({msg:error});
+    }
 })
 
 //Share Content EndPoint 
