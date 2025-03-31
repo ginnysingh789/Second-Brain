@@ -22,6 +22,6 @@ const sizeStyle={
 
 export const Button=(props:btwprop)=>{
   return(
-    <button className={`${VariantStyle[props.variant]} ${defaultStyle} ${sizeStyle[props.size]}`}>{props.starticon ?<div className="pr-2">{props.starticon}</div>:null}{props.text}</button>//<Button> refers to  any custom Button Element which i dont  have 
+    <button className={`${VariantStyle[props.variant]} ${defaultStyle} ${sizeStyle[props.size]}`}>{props.starticon ?<div className="pr-2">{props.starticon}</div>:null}{props.text}{props.endicon ?<div className="pr-2">{props.endicon}</div>:null}</button>//<Button> refers to  any custom Button Element which i dont  have 
   )
 }
