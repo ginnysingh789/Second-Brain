@@ -10,7 +10,8 @@ import jwt from 'jsonwebtoken';
 import { CheckToken } from './Middleware/CheckToken';
 import { ContentModel } from './db/ContentScheme';
 import { LinkModel } from './db/LinkScheme';
-import { generateRandon } from './db/Utils';
+import { generateRandom } from './db/Utils';
+import { Model } from 'mongoose';
 
 
 dotenv.config();
@@ -22,20 +23,20 @@ app.use(express.json());
 async function startServer() {
     await connect(); // Calling the connect function\\
 }
-app.post('/api/v1/signup', async (req: Request, res: Response): Promise<any> => {
+app.post('/api/v1/signup', async (req: Request, res: Response) => {
     //Zod Valiation 
     const validSignIn = userValidScheme.safeParse(req.body);
 
     if (!validSignIn.success) {
         console.log('Validation failed:', validSignIn.error);
-        return res.status(411).json({ msg: 'Error in inputs' })
+        res.status(411).json({ msg: 'Error in inputs' })
+        return;
     }
-
     //CHeck user Already Exist or not 
     if ((await CheckUserExit(validSignIn.data.username))) {
-        return res.status(403).json({ msg: 'User alreaddy Exist ' })
+        res.status(403).json({ msg: 'User alreaddy Exist ' })
+        return;
     }
-
     //Hash the password
     const hashedPassword = await bcrypt.hash(validSignIn.data.password, 10)
     //Push the data in the database
@@ -45,21 +46,25 @@ app.post('/api/v1/signup', async (req: Request, res: Response): Promise<any> => 
                 username: validSignIn.data.username,
                 password: hashedPassword
             })
-        return res.status(200).json({ msg: 'signed up' })
+        res.status(200).json({ msg: 'signed up' })
+        return;
     } catch (error) {
-        return res.status(500).json({ msg: 'server error' + error })
+        res.status(500).json({ msg: 'server error' + error })
+        return;
     }
 })
 //Sign in EndPoint 
-app.post('/api/v1/signin', async (req: Request, res: Response): Promise<any> => {
+app.post('/api/v1/signin', async (req: Request, res: Response) => {
     try {
         const recivedSignInData = userValidScheme.safeParse(req.body);
         if (!recivedSignInData.success) {
             console.log('Validation failed:', recivedSignInData.error);
-            return res.status(411).json({ msg: 'Error in inputs' })
+            res.status(411).json({ msg: 'Error in inputs' })
+            return;
         }
         if (!(await CheckUserSignIn(recivedSignInData.data.username, recivedSignInData.data.password))) {
-            return res.status(403).json({ msg: 'Invalid Creditenial ' });
+            res.status(403).json({ msg: 'Invalid Creditenial ' });
+            return;
         }
         //Generate Token 
         if (Secret_key) {
@@ -70,11 +75,13 @@ app.post('/api/v1/signin', async (req: Request, res: Response): Promise<any> => 
                 { expiresIn: '1h' }
             );
 
-            return res.status(200).json({ token })
+            res.status(200).json({ token })
+            return;
         }
 
     } catch (error) {
         res.status(500).json({ msg: 'Interval sever error' + error })
+        return;
     }
 })
 //Add Content EndPoint 
@@ -96,7 +103,6 @@ app.post('/api/v1/content', CheckToken, async (req: Request, res: Response) => {
         res.status(200).json({ msg: 'Content Added' })
     } catch (error) {
         res.json({ msg: 'Error ' + error })
-
     }
 })
 //  Get Content EndPoint 
@@ -111,13 +117,14 @@ app.get('/api/v1/content', CheckToken, async (req: Request, res: Response) => {
     }
 })
 //Delete Content EndPoint 
-app.delete('/api/v1/content', CheckToken, async (req: Request, res: Response): Promise<any> => {
+app.delete('/api/v1/content', CheckToken, async (req: Request, res: Response) => {
     const deleteContent = req.body.id;;
     //@ts-ignore
     const userId = req.userId;
     //Done at later 
     if (! await (ContentModel.findOne({ userId: userId }))) {
-        return res.status(403).json({ msg: 'You dont own this doc' })
+        res.status(403).json({ msg: 'You dont own this doc' })
+        return;
     }
     try {
         await ContentModel.deleteMany({ _id: deleteContent, userId: userId });
@@ -127,57 +134,47 @@ app.delete('/api/v1/content', CheckToken, async (req: Request, res: Response): P
         res.status(411).json({ msg: error });
     }
 })
-
 //Share Content EndPoint 
-app.post('/api/v1/brain/share', CheckToken, async (req:Request, res:Response) => {
-   
-        const share = req.body.share;//Taking share as input true or false
+app.post('/api/v1/brain/share', CheckToken, async (req: Request, res: Response) => {
+
+    const share = req.body.share;//Taking share as input true or false
     if (share)//If share is true generarte a shareable link
     {
+        const hashValue = generateRandom(10)
         await LinkModel.create({
             //@ts-ignore
             userId: req.userId,
-            hash: generateRandon(10)
+            hash: hashValue
         })
-        res.status(200).json({msg:hash})
+        //@ts-ignore
+        res.status(200).json({ msg: hashValue })
     }
     else {
         LinkModel.deleteOne({
             //@ts-ignore
             userId: req.userId
         })
-        
     }
-        
-      
 })
-
 //Fetch other Content End Point 
-app.get('/api/v1/brain/:shareLink', async(req, res) :Promise<any>=> {
+app.get('/api/v1/brain/:shareLink', async (req: Request, res: Response): Promise<any> => {
     try {
-        const hash=req.params.shareLink;//Use ShareLink here 
-        const link=await LinkModel.findOne({
-            hash:hash
-        })
-        if(!link)//If link is valid or null
-        {
-            return  res.status(411).json({msg:'Invalid share link'})
-        }//if exist then display the content of the share
-        
-            const content=await ContentModel.findOne({
-                userId:link.userId
-            })
-        
-        const user=await UserModel.findOne({userId:link?.userId})
+        const hash = req.params.shareLink;
+        const link = await LinkModel.findOne({ hash });
+        if (!link) {
+            return res.status(411).json({ msg: 'Invalid share link' });
+        }
+        const content = await ContentModel.findOne({ userId: link.userId });
+        const user = await UserModel.findOne({ _id: link.userId });
+
         res.status(200).json({
-            username:user?.username,
-            content:content
-        })
-        
+            username: user?.username,
+            content: content,
+        });
     } catch (error) {
-        res.json({msg:"Error"+error})
+        return res.status(500).json({ msg: "Error: " + error });
     }
-   
-})
+});
+
 app.listen(5000, () => { console.log('Server  is Running') })
 startServer();
