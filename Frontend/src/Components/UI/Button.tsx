@@ -13,7 +13,7 @@ const VariantStyle = {
   primary: "bg-[#4e47e4] text-white", // Custom purple-600
   secondary: "bg-[#dfe8fe] text-[#4e47e4]" // Custom purple-400
 };
-const defaultStyle="rounded-md flex";
+const defaultStyle="rounded-md flex font-semibold text-xl  items-center";
 const sizeStyle={
   "sm":"py-1 px-2",
   "md":"py-2 px-4",
