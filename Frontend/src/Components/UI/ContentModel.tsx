@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { CrossIcon } from "../Icons/CrossIcon";
-import { Button } from "./UI/Button";
+import { Button } from "./Button";
 
 interface ModelType {
   open: boolean;
